@@ -34,7 +34,7 @@ namespace Slang
             for (auto func : data)
             {
                 out << func.key << ": \t";
-                auto milliseconds = std::chrono::duration_cast< std::chrono::milliseconds >(func.value.duration);
+                double milliseconds = std::chrono::duration_cast< std::chrono::milliseconds >(func.value.duration);
                 out << func.value.invocationCount << "\t" << milliseconds.count() << "ms\n";
             }
         }
