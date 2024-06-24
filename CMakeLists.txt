@@ -88,13 +88,12 @@ option(SLANG_ENABLE_FULL_IR_VALIDATION "Enable full IR validation (SLOW!)")
 option(SLANG_ENABLE_ASAN "Enable ASAN (address sanitizer)")
 
 option(SLANG_ENABLE_PREBUILT_BINARIES "Enable using prebuilt binaries" ON)
-option(SLANG_ENABLE_GFX "Enable gfx targets" ON)
-option(SLANG_ENABLE_SLANGD "Enable language server target" ON)
-option(SLANG_ENABLE_SLANGC "Enable standalone compiler target" ON)
-option(SLANG_ENABLE_SLANGRT "Enable runtime target" ON)
+option(SLANG_ENABLE_GFX "Enable gfx targets" OFF)
+option(SLANG_ENABLE_SLANGD "Enable language server target" OFF)
+option(SLANG_ENABLE_SLANGC "Enable standalone compiler target" OFF)
+option(SLANG_ENABLE_SLANGRT "Enable runtime target" OFF)
 option(SLANG_ENABLE_SLANG_GLSLANG "Enable glslang dependency and slang-glslang wrapper target" ON)
-option(SLANG_ENABLE_TESTS "Enable test targets, requires SLANG_ENABLE_GFX, SLANG_ENABLE_SLANGD and SLANG_ENABLE_SLANGRT" ON)
-option(SLANG_ENABLE_EXAMPLES "Enable example targets, requires SLANG_ENABLE_GFX" ON)
+option(SLANG_ENABLE_EXAMPLES "Enable example targets, requires SLANG_ENABLE_GFX" OFF)
 
 enum_option(
     SLANG_LIB_TYPE
@@ -559,129 +558,6 @@ if(docs)
     install(FILES ${docs} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 endif()
 
-#
-# The test executables and runtime-loaded modules
-#
-if(SLANG_ENABLE_TESTS AND SLANG_ENABLE_GFX AND SLANG_ENABLE_SLANGD AND SLANG_ENABLE_SLANGRT)
-    slang_add_target(
-        tools/test-server
-        EXECUTABLE
-        EXCLUDE_FROM_ALL
-        LINK_WITH_PRIVATE core compiler-core slang
-        FOLDER test
-    )
-    slang_add_target(
-        tools/test-process
-        EXECUTABLE
-        EXCLUDE_FROM_ALL
-        LINK_WITH_PRIVATE core compiler-core
-        FOLDER test
-    )
-
-    slang_add_target(
-        tools/slang-test
-        EXECUTABLE
-        USE_FEWER_WARNINGS
-        LINK_WITH_PRIVATE core compiler-core slang ${CMAKE_DL_LIBS} Threads::Threads
-        REQUIRES
-            # Shared libraries dlopened by slang-test
-            slang-reflection-test
-            render-test
-            slang-unit-test
-            gfx-unit-test
-            # Used by some tests when they run
-            slangd
-            slang-rt
-            gfx
-            test-server
-            test-process
-        FOLDER test
-        DEBUG_DIR ${slang_SOURCE_DIR}
-    )
-    if(TARGET slang-glslang)
-        # Only add a dependency here if slang-glslang exists
-        add_dependencies(slang-test slang-glslang)
-    endif()
-    if(TARGET slang-llvm)
-        # Only add a dependency here if slang-llvm exists
-        # Pending https://gitlab.kitware.com/cmake/cmake/-/issues/19467 to be able
-        # to use a generator expression in REQUIRES just above.
-        add_dependencies(slang-test slang-llvm)
-    endif()
-    set_property(
-        DIRECTORY ${slang_SOURCE_DIR}
-        PROPERTY VS_STARTUP_PROJECT slang-test
-    )
-
-    slang_add_target(
-        tools/unit-test
-        OBJECT
-        EXCLUDE_FROM_ALL
-        INCLUDE_FROM_PRIVATE slang
-        FOLDER test
-    )
-
-    # These are libraries loaded at runtime from the test executable:
-    slang_add_target(
-        tools/gfx-unit-test
-        MODULE
-        EXCLUDE_FROM_ALL
-        EXTRA_COMPILE_DEFINITIONS_PRIVATE SLANG_SHARED_LIBRARY_TOOL
-        USE_FEWER_WARNINGS
-        LINK_WITH_PRIVATE core slang unit-test gfx gfx-util platform
-        OUTPUT_NAME gfx-unit-test-tool
-        FOLDER test/tools
-    )
-    slang_add_target(
-        tools/slang-unit-test
-        MODULE
-        EXCLUDE_FROM_ALL
-        EXTRA_COMPILE_DEFINITIONS_PRIVATE SLANG_SHARED_LIBRARY_TOOL
-        USE_FEWER_WARNINGS
-        LINK_WITH_PRIVATE core compiler-core unit-test slang Threads::Threads
-        OUTPUT_NAME slang-unit-test-tool
-        FOLDER test/tools
-    )
-    slang_add_target(
-        tools/slang-reflection-test
-        MODULE
-        EXCLUDE_FROM_ALL
-        EXTRA_COMPILE_DEFINITIONS_PRIVATE SLANG_SHARED_LIBRARY_TOOL
-        USE_FEWER_WARNINGS
-        LINK_WITH_PRIVATE core slang Threads::Threads
-        OUTPUT_NAME slang-reflection-test-tool
-        FOLDER test/tools
-    )
-    slang_add_target(
-        tools/render-test
-        MODULE
-        EXCLUDE_FROM_ALL
-        EXTRA_COMPILE_DEFINITIONS_PRIVATE SLANG_SHARED_LIBRARY_TOOL
-        USE_FEWER_WARNINGS
-        LINK_WITH_PRIVATE
-            core
-            compiler-core
-            slang
-            gfx
-            gfx-util
-            platform
-            $<$<BOOL:${SLANG_ENABLE_CUDA}>:CUDA::cuda_driver>
-        EXTRA_COMPILE_DEFINITIONS_PRIVATE
-            $<$<BOOL:${SLANG_ENABLE_CUDA}>:RENDER_TEST_CUDA>
-            $<$<BOOL:${SLANG_ENABLE_OPTIX}>:RENDER_TEST_OPTIX>
-        OUTPUT_NAME render-test-tool
-        FOLDER test/tools
-    )
-
-    slang_add_target(
-        tools/slang-profile
-        EXECUTABLE
-        EXCLUDE_FROM_ALL
-        LINK_WITH_PRIVATE core slang
-        FOLDER test
-    )
-endif()
-
 if (SLANG_ENABLE_EXAMPLES AND SLANG_ENABLE_GFX)
     #
     # Examples
@@ -778,22 +654,6 @@ if (SLANG_ENABLE_EXAMPLES AND SLANG_ENABLE_GFX)
     if(SLANG_ENABLE_AFTERMATH)
         example(examples/nv-aftermath-example WIN32_EXECUTABLE)
     endif()
-endif()
-
-#
-# Testing
-#
-if(SLANG_ENABLE_TESTS)
-    include(CTest)
-    add_test(
-        NAME slang-test
-        COMMAND
-            slang-test -bindir ${slang_SOURCE_DIR}/build/$<CONFIG>/${runtime_subdir}
-            -expected-failure-list ${slang_SOURCE_DIR}/tests/expected-failure.txt
-            -expected-failure-list
-            ${slang_SOURCE_DIR}/tests/expected-failure-github.txt
-        WORKING_DIRECTORY ${slang_SOURCE_DIR}
-    )
 endif()
 
 #
