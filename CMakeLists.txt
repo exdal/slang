@@ -177,7 +177,6 @@ glob_append(
 if(premake_generated_files)
     file(REMOVE ${premake_generated_files})
 endif()
-file(REMOVE external/miniz/miniz_export.h)
 
 #
 # Dependencies, most of these are however handled inside the "auto_option"
@@ -190,8 +189,6 @@ if(SLANG_SLANG_LLVM_FLAVOR STREQUAL "USE_SYSTEM_LLVM")
     find_package(LLVM 13.0 REQUIRED CONFIG)
     find_package(Clang REQUIRED CONFIG)
 endif()
-
-add_subdirectory(external)
 
 #
 # Our targets
