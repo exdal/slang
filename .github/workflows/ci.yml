@@ -21,7 +21,7 @@ jobs:
             warnings-as-errors: true
             test-category: smoke
             full-gpu-tests: false
-            runs-on: ubuntu-20.04
+            runs-on: ubuntu-24.04
         # os: [linux, macos, windows]
         # compiler: ['gcc', 'clang', 'cl']
         # config: ['debug', 'release']
